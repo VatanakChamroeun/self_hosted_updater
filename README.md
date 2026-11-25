@@ -61,7 +61,7 @@ Install directly from GitHub (always get the latest):
 dependencies:
   self_hosted_updater:
     git:
-      url: https://github.com/VatanakChamroeun/flutter-custom-updater.git
+      url: https://github.com/VatanakChamroeun/self_hosted_updater.git
 ```
 
 or install to your local

@@ -4,7 +4,7 @@ Thank you for your interest in contributing! 🎉 Your contributions help make t
 
 ## 🚀 Ways to Contribute
 
-1. **🐛 Report Bugs:** [Open an issue](https://github.com/VatanakChamroeun/flutter-custom-updater/issues) with clear reproduction steps.  
+1. **🐛 Report Bugs:** [Open an issue](https://github.com/VatanakChamroeun/self_hosted_updater/issues) with clear reproduction steps.  
    Include screenshots, logs, or videos if possible.
 2. **💡 Suggest Features:** Have an idea? Create an issue describing your proposed feature.
 3. **📝 Improve Documentation:** Fix typos, clarify examples, or expand sections. Pull requests are welcome!
@@ -35,4 +35,4 @@ Please follow [Conventional Commits](https://www.conventionalcommits.org/) for c
 
 ## 💬 Support
 
-If you have any questions or issues, please [open an issue](https://github.com/VatanakChamroeun/flutter-custom-updater/issues) on GitHub.
+If you have any questions or issues, please [open an issue](https://github.com/VatanakChamroeun/self_hosted_updater/issues) on GitHub.

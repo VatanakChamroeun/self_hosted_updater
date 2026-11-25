@@ -4,6 +4,8 @@ description: "Flutter package for internal app updates (APK & IPA). Ideal for se
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
 version: 2.0.0
+repository: https://github.com/VatanakChamroeun/self_hosted_updater
+issue_tracker: https://github.com/VatanakChamroeun/self_hosted_updater/issues
 
 license: MIT
 
