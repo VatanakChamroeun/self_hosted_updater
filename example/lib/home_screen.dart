@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_custom_updater/flutter_custom_updater.dart';
+import 'package:self_hosted_updater/self_hosted_updater.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -98,16 +98,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final jsonResponse = json.decode(response.body);
     final responseData = jsonResponse['data'] ?? jsonResponse;
-    
-    return UpdateInfo(
-      hasUpdate: responseData['has_update'] ?? false,
-      version: responseData['version'] ?? _appVersion,
-    );
+
+    // Same model the package uses to parse the server response.
+    return UpdateInfo.fromJson(responseData);
   }
 
   void _handleUpdateInfo(UpdateInfo info) {
     setState(() {
-      _latestVersion = info.version;
+      _latestVersion = info.version ?? _appVersion;
       _hasUpdate = info.hasUpdate;
       _updateStatus = info.hasUpdate
           ? '🆕 Update available!'
@@ -120,9 +118,22 @@ class _HomeScreenState extends State<HomeScreen> {
     await updater.checkAndUpdate();
   }
 
+  /// Dialog style to demo. Override at build time, e.g.
+  /// `flutter run --dart-define=DIALOG_STYLE=cupertino`
+  /// (material | cupertino | bottomSheet).
+  static final DialogStyle _dialogStyle = DialogStyle.values.firstWhere(
+    (style) =>
+        style.name ==
+        const String.fromEnvironment(
+          'DIALOG_STYLE',
+          defaultValue: 'bottomSheet',
+        ),
+    orElse: () => DialogStyle.bottomSheet,
+  );
+
   UpdaterConfig _buildUpdaterConfig() {
     return UpdaterConfig(
-      dialogStyle: DialogStyle.snackbar,
+      dialogStyle: _dialogStyle,
       updateCheckUrl: _getServerUrl(),
       language: 'en', // your current app language
       dialogTitle: 'Update Available! 🚀',
@@ -161,8 +172,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _showErrorSnackBar(String message) {
     if (!mounted) return;
+    final scheme = Theme.of(context).colorScheme;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+      SnackBar(
+        content: Text(
+          message,
+          style: TextStyle(color: scheme.onErrorContainer),
+        ),
+        backgroundColor: scheme.errorContainer,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
@@ -170,24 +189,19 @@ class _HomeScreenState extends State<HomeScreen> {
   // UI Helpers
   // ============================================================================
 
-  Color _getVersionColor() {
-    if (_hasUpdate) return Colors.orange.shade700;
-    if (_latestVersion == _appVersion && _latestVersion != '...') {
-      return Colors.green.shade700;
-    }
-    return Colors.grey.shade700;
+  bool get _isUpToDate =>
+      _latestVersion == _appVersion && _latestVersion != '...';
+
+  Color _getVersionColor(ColorScheme scheme) {
+    if (_hasUpdate) return scheme.tertiary;
+    if (_isUpToDate) return scheme.primary;
+    return scheme.onSurfaceVariant;
   }
 
   IconData _getStatusIcon() {
-    if (_hasUpdate) return Icons.new_releases;
-    if (_updateStatus.contains('✅')) return Icons.check_circle;
-    return Icons.info_outline;
-  }
-
-  Color _getStatusIconColor() {
-    if (_hasUpdate) return Colors.orange;
-    if (_updateStatus.contains('✅')) return Colors.green;
-    return Colors.grey;
+    if (_hasUpdate) return Icons.new_releases_rounded;
+    if (_updateStatus.contains('✅')) return Icons.check_circle_rounded;
+    return Icons.info_outline_rounded;
   }
 
   // ============================================================================
@@ -198,23 +212,25 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Flutter Custom Updater Demo'),
+        title: const Text('Self-Hosted Updater Demo'),
         centerTitle: true,
       ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildHeader(context),
-              const SizedBox(height: 40),
-              _buildPlatformInfoCard(),
-              const SizedBox(height: 30),
-              _buildVersionInfoCard(),
-              const SizedBox(height: 40),
-              _buildCheckUpdateButton(),
-            ],
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildHeader(context),
+                const SizedBox(height: 32),
+                _buildStatusCard(context),
+                const SizedBox(height: 32),
+                _buildCheckUpdateButton(),
+              ],
+            ),
           ),
         ),
       ),
@@ -222,194 +238,165 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return Column(
       children: [
-        Icon(
-          Icons.system_update_outlined,
-          size: 100,
-          color: Theme.of(context).primaryColor,
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: scheme.primaryContainer,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.system_update_rounded,
+            size: 56,
+            color: scheme.onPrimaryContainer,
+          ),
         ),
-        const SizedBox(height: 12),
-        const Text(
-          'Flutter Custom Updater',
-          style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 20),
         Text(
-          'Cross-Platform App Updates',
-          style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+          'Self-Hosted Updater',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Self-hosted updates for Android & iOS',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: scheme.onSurfaceVariant,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildPlatformInfoCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.blue.shade200, width: 2),
-      ),
-      child: Column(
-        children: [
-          _buildPlatformHeader(),
-          const SizedBox(height: 16),
-          _buildStatusIndicator(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPlatformHeader() {
+  Widget _buildStatusCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final isAndroid = Platform.isAndroid;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(
-          isAndroid ? Icons.android : Icons.apple,
-          color: Colors.blue.shade700,
-          size: 28,
-        ),
-        const SizedBox(width: 12),
-        Text(
-          isAndroid ? 'Android (APK)' : 'iOS (IPA)',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-            color: Colors.blue.shade700,
-          ),
-        ),
-      ],
-    );
-  }
 
-  Widget _buildStatusIndicator() {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(_getStatusIcon(), size: 18, color: _getStatusIconColor()),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              _updateStatus,
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 14, color: Colors.grey[800]),
+    return Card.filled(
+      color: scheme.surfaceContainerLow,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  isAndroid ? Icons.android_rounded : Icons.apple_rounded,
+                  color: scheme.primary,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  isAndroid ? 'Android (APK)' : 'iOS (IPA)',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVersionInfoCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: Column(
-        children: [
-          _buildCurrentVersionRow(),
-          const SizedBox(height: 12),
-          _buildDivider(),
-          const SizedBox(height: 12),
-          _buildLatestVersionRow(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCurrentVersionRow() {
-    final versionText = _buildNumber.isNotEmpty
-        ? '$_appVersion ($_buildNumber)'
-        : _appVersion;
-
-    return _buildVersionRow(
-      icon: Icons.phone_android,
-      label: 'Current:',
-      version: versionText,
-      color: Colors.grey.shade800,
-    );
-  }
-
-  Widget _buildLatestVersionRow() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _buildVersionRow(
-          icon: Icons.cloud_download,
-          label: 'Latest:',
-          version: _latestVersion,
-          color: _getVersionColor(),
-          iconColor: _getVersionColor(),
+            const SizedBox(height: 16),
+            _buildVersionRow(
+              context,
+              icon: Icons.smartphone_rounded,
+              label: 'Current',
+              version: _buildNumber.isNotEmpty
+                  ? '$_appVersion ($_buildNumber)'
+                  : _appVersion,
+              color: scheme.onSurface,
+            ),
+            const SizedBox(height: 10),
+            _buildVersionRow(
+              context,
+              icon: Icons.cloud_download_rounded,
+              label: 'Latest',
+              version: _latestVersion,
+              color: _getVersionColor(scheme),
+              trailing: _hasUpdate
+                  ? Icon(
+                      Icons.arrow_upward_rounded,
+                      size: 16,
+                      color: scheme.tertiary,
+                    )
+                  : null,
+            ),
+            const SizedBox(height: 16),
+            Divider(height: 1, color: scheme.outlineVariant),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Icon(
+                  _getStatusIcon(),
+                  size: 18,
+                  color: _hasUpdate ? scheme.tertiary : scheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _updateStatus,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
-        if (_hasUpdate) ...[
-          const SizedBox(width: 4),
-          Icon(Icons.arrow_upward, size: 14, color: Colors.orange.shade700),
-        ],
-      ],
+      ),
     );
   }
 
-  Widget _buildVersionRow({
+  Widget _buildVersionRow(
+    BuildContext context, {
     required IconData icon,
     required String label,
     required String version,
     required Color color,
-    Color? iconColor,
+    Widget? trailing,
   }) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(icon, size: 16, color: iconColor ?? Colors.grey.shade600),
-        const SizedBox(width: 8),
-        Text(label, style: TextStyle(color: Colors.grey.shade600)),
-        const SizedBox(width: 8),
+        Icon(icon, size: 18, color: scheme.onSurfaceVariant),
+        const SizedBox(width: 10),
+        Text(
+          label,
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
+        const Spacer(),
         Text(
           version,
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
             color: color,
           ),
         ),
+        if (trailing != null) ...[const SizedBox(width: 4), trailing],
       ],
     );
   }
 
-  Widget _buildDivider() {
-    return Container(height: 1, width: 100, color: Colors.grey.shade300);
-  }
-
   Widget _buildCheckUpdateButton() {
-    return ElevatedButton.icon(
+    return FilledButton.tonalIcon(
       onPressed: _checkForUpdates,
-      icon: const Icon(Icons.refresh, size: 24),
-      label: const Text('Check for Updates', style: TextStyle(fontSize: 18)),
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      icon: const Icon(Icons.refresh_rounded),
+      label: const Text('Check for Updates'),
+      style: FilledButton.styleFrom(
+        minimumSize: const Size.fromHeight(56),
+        textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
       ),
     );
   }
-}
-
-// ============================================================================
-// Data Models
-// ============================================================================
-
-class UpdateInfo {
-  final bool hasUpdate;
-  final String version;
-
-  UpdateInfo({required this.hasUpdate, required this.version});
 }

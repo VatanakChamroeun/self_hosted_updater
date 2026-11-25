@@ -1,6 +1,6 @@
 # Mock Update Server
 
-A simple mock server for testing Flutter Custom Updater package.
+A simple mock server for testing Self-Hosted Updater package.
 
 ## Features
 
@@ -141,7 +141,19 @@ Set your app version to something lower (e.g., 1.0.0) in pubspec.yaml to trigger
 
 #### Test Force Update:
 
-Edit `server.js` and change `forceUpdate: false` to `forceUpdate: true`.
+```bash
+FORCE_UPDATE=1 node server.js
+```
+
+Every update is then sent with `force_update: true` (no "Later", no Cancel, Retry-only errors).
+
+#### Test Download Progress (slow network):
+
+```bash
+SLOW_DOWNLOAD_KBPS=2048 node server.js
+```
+
+APK downloads are throttled to the given speed so the progress bar and Cancel button are easy to try.
 
 ### Health Check
 

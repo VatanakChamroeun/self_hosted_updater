@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_custom_updater/flutter_custom_updater.dart';
-import 'package:http/http.dart' as http;
-import 'package:mockito/annotations.dart';
+import 'package:self_hosted_updater/self_hosted_updater.dart';
+import 'package:self_hosted_updater/src/widgets/material_update_dialog.dart';
+import 'package:self_hosted_updater/src/widgets/material_download_dialog.dart';
 
-// Generate mocks
-@GenerateMocks([http.Client])
 void main() {
   group('UpdateInfo Model Tests', () {
     test('should create UpdateInfo from JSON with all fields', () {
@@ -24,12 +22,18 @@ void main() {
 
       expect(updateInfo.hasUpdate, true);
       expect(updateInfo.version, '1.2.3');
-      expect(updateInfo.downloadUrl, 'http://localhost:3000/downloads/app-v1.2.3.apk');
+      expect(
+        updateInfo.downloadUrl,
+        'http://localhost:3000/downloads/app-v1.2.3.apk',
+      );
       expect(updateInfo.fileName, 'app.apk');
       expect(updateInfo.releaseNotes, 'Bug fixes');
       expect(updateInfo.forceUpdate, false);
       expect(updateInfo.fileSize, 1024000);
-      expect(updateInfo.iosManifestUrl, 'http://localhost:3000/ios/manifest.plist');
+      expect(
+        updateInfo.iosManifestUrl,
+        'http://localhost:3000/ios/manifest.plist',
+      );
     });
 
     test('should handle missing optional fields', () {
@@ -60,7 +64,10 @@ void main() {
 
       expect(json['has_update'], true);
       expect(json['version'], '1.2.3');
-      expect(json['download_url'], 'http://localhost:3000/downloads/app-v1.2.3.apk');
+      expect(
+        json['download_url'],
+        'http://localhost:3000/downloads/app-v1.2.3.apk',
+      );
       expect(json['file_name'], 'app.apk');
       expect(json['release_notes'], 'Bug fixes');
       expect(json['force_update'], true);
@@ -70,10 +77,12 @@ void main() {
 
   group('UpdaterConfig Tests', () {
     test('should create config with required fields only', () {
-      final config = UpdaterConfig(updateCheckUrl: 'http://localhost:3000/api/check-update');
+      final config = UpdaterConfig(
+        updateCheckUrl: 'http://localhost:3000/api/check-update',
+      );
 
       expect(config.updateCheckUrl, 'http://localhost:3000/api/check-update');
-      expect(config.timeout, Duration(seconds: 30));
+      expect(config.checkTimeout, Duration(seconds: 30));
       expect(config.downloadTimeout, Duration(minutes: 5));
       expect(config.allowDismiss, false);
     });
@@ -82,7 +91,7 @@ void main() {
       final config = UpdaterConfig(
         updateCheckUrl: 'http://localhost:3000/api/check-update',
         customHeaders: {'Authorization': 'Bearer token'},
-        timeout: Duration(seconds: 60),
+        checkTimeout: Duration(seconds: 60),
         downloadTimeout: Duration(minutes: 10),
         allowDismiss: true,
         dialogTitle: 'Update Available',
@@ -93,7 +102,7 @@ void main() {
 
       expect(config.updateCheckUrl, 'http://localhost:3000/api/check-update');
       expect(config.customHeaders, {'Authorization': 'Bearer token'});
-      expect(config.timeout, Duration(seconds: 60));
+      expect(config.checkTimeout, Duration(seconds: 60));
       expect(config.downloadTimeout, Duration(minutes: 10));
       expect(config.allowDismiss, true);
       expect(config.dialogTitle, 'Update Available');
@@ -117,7 +126,7 @@ void main() {
     });
   });
 
-  group('UpdateDialog Widget Tests', () {
+  group('MaterialUpdateDialog Widget Tests', () {
     testWidgets('should display update dialog with all info', (tester) async {
       final updateInfo = UpdateInfo(
         hasUpdate: true,
@@ -144,7 +153,10 @@ void main() {
                   onPressed: () {
                     showDialog(
                       context: context,
-                      builder: (context) => UpdateDialog(updateInfo: updateInfo, config: config),
+                      builder: (context) => MaterialUpdateDialog(
+                        updateInfo: updateInfo,
+                        config: config,
+                      ),
                     );
                   },
                   child: Text('Show Dialog'),
@@ -190,7 +202,10 @@ void main() {
                   onPressed: () {
                     showDialog(
                       context: context,
-                      builder: (context) => UpdateDialog(updateInfo: updateInfo, config: config),
+                      builder: (context) => MaterialUpdateDialog(
+                        updateInfo: updateInfo,
+                        config: config,
+                      ),
                     );
                   },
                   child: Text('Show Dialog'),
@@ -219,7 +234,9 @@ void main() {
         fileSize: 25600000, // 25.6 MB
       );
 
-      final config = UpdaterConfig(updateCheckUrl: 'http://localhost:3000/api/check-update');
+      final config = UpdaterConfig(
+        updateCheckUrl: 'http://localhost:3000/api/check-update',
+      );
 
       await tester.pumpWidget(
         MaterialApp(
@@ -230,7 +247,10 @@ void main() {
                   onPressed: () {
                     showDialog(
                       context: context,
-                      builder: (context) => UpdateDialog(updateInfo: updateInfo, config: config),
+                      builder: (context) => MaterialUpdateDialog(
+                        updateInfo: updateInfo,
+                        config: config,
+                      ),
                     );
                   },
                   child: Text('Show Dialog'),
@@ -250,7 +270,7 @@ void main() {
     });
   });
 
-  group('DownloadDialog Widget Tests', () {
+  group('MaterialDownloadDialog Widget Tests', () {
     testWidgets('should display download progress', (tester) async {
       final config = UpdaterConfig(
         updateCheckUrl: 'http://localhost:3000/api/check-update',
@@ -259,7 +279,7 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
-          home: Scaffold(body: DownloadDialog(config: config)),
+          home: Scaffold(body: MaterialDownloadDialog(config: config)),
         ),
       );
 
@@ -268,7 +288,9 @@ void main() {
     });
 
     testWidgets('should not be dismissible', (tester) async {
-      final config = UpdaterConfig(updateCheckUrl: 'http://localhost:3000/api/check-update');
+      final config = UpdaterConfig(
+        updateCheckUrl: 'http://localhost:3000/api/check-update',
+      );
 
       await tester.pumpWidget(
         MaterialApp(
@@ -280,7 +302,8 @@ void main() {
                     showDialog(
                       context: context,
                       barrierDismissible: false,
-                      builder: (context) => DownloadDialog(config: config),
+                      builder: (context) =>
+                          MaterialDownloadDialog(config: config),
                     );
                   },
                   child: Text('Show Download'),
@@ -291,12 +314,14 @@ void main() {
         ),
       );
 
+      // The indeterminate spinner animates forever, so pumpAndSettle() would
+      // never settle. Pump a fixed duration past the dialog transition instead.
       await tester.tap(find.text('Show Download'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
 
       // Try to dismiss by tapping outside
       await tester.tapAt(Offset(10, 10));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
 
       // Dialog should still be visible
       expect(find.byType(CircularProgressIndicator), findsOneWidget);

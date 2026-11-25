@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_custom_updater/flutter_custom_updater.dart';
+import 'package:self_hosted_updater/self_hosted_updater.dart';
 
 void main() {
   group('Integration Tests', () {
@@ -124,11 +124,11 @@ void main() {
     test('Handle timeout scenarios', () {
       final config = UpdaterConfig(
         updateCheckUrl: 'http://localhost:3000/api/check-update',
-        timeout: Duration(seconds: 5),
+        checkTimeout: Duration(seconds: 5),
         downloadTimeout: Duration(seconds: 30),
       );
 
-      expect(config.timeout.inSeconds, 5);
+      expect(config.checkTimeout.inSeconds, 5);
       expect(config.downloadTimeout.inSeconds, 30);
     });
   });

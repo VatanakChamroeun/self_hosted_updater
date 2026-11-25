@@ -1,16 +1,27 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_custom_updater/flutter_custom_updater.dart';
-import 'package:flutter_custom_updater/src/widgets/cupertino_download_dialog.dart';
-import 'package:flutter_custom_updater/src/widgets/cupertino_update_dialog.dart';
-import 'package:flutter_custom_updater/src/widgets/snackbar_download_widget.dart';
-import 'package:flutter_custom_updater/src/widgets/snackbar_update_widget.dart';
+import 'package:self_hosted_updater/src/download/update_downloader.dart';
+import 'package:self_hosted_updater/src/models/dialog_style.dart';
+import 'package:self_hosted_updater/src/models/update_info.dart';
+import 'package:self_hosted_updater/src/models/updater_config.dart';
+import 'package:self_hosted_updater/src/platform/install_permission.dart';
+import 'package:self_hosted_updater/src/utils/update_utils.dart';
+import 'package:self_hosted_updater/src/widgets/cupertino_download_dialog.dart';
+import 'package:self_hosted_updater/src/widgets/cupertino_update_dialog.dart';
+import 'package:self_hosted_updater/src/widgets/download_sheet.dart';
+import 'package:self_hosted_updater/src/widgets/material_download_dialog.dart';
+import 'package:self_hosted_updater/src/widgets/material_update_dialog.dart';
+import 'package:self_hosted_updater/src/widgets/update_content.dart';
+import 'package:self_hosted_updater/src/widgets/update_message_prompt.dart';
+import 'package:self_hosted_updater/src/widgets/update_sheet.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_filex/open_filex.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -22,36 +33,46 @@ class AppUpdater {
 
   /// Main method to check and update app (works for both Android & iOS)
   Future<void> checkAndUpdate() async {
+    final UpdateInfo updateInfo;
     try {
-      // Get current version
-      PackageInfo packageInfo = await PackageInfo.fromPlatform();
-      String currentVersion = packageInfo.version;
+      final packageInfo = await PackageInfo.fromPlatform();
+      updateInfo = await _checkForUpdate(packageInfo.version);
+    } catch (e) {
+      _reportError('Failed to check for updates: $e');
+      return;
+    }
 
-      // Check for updates
-      UpdateInfo? updateInfo = await _checkForUpdate(currentVersion);
+    if (!updateInfo.hasUpdate) {
+      config.onNoUpdateAvailable?.call();
+      return;
+    }
 
-      if (updateInfo != null && updateInfo.hasUpdate) {
-        // Show update dialog
-        bool? shouldUpdate = await _showUpdateDialog(updateInfo);
+    // The caller's widget may have been disposed while the request was in flight.
+    if (!context.mounted) return;
 
-        if (shouldUpdate == true) {
-          if (Platform.isAndroid) {
-            await _downloadAndInstallApk(updateInfo);
-          } else if (Platform.isIOS) {
-            await _handleIosUpdate(updateInfo);
-          }
-        }
-      } else {
-        if (config.onNoUpdateAvailable != null) {
-          config.onNoUpdateAvailable!();
-        }
+    try {
+      final shouldUpdate = await _showUpdateDialog(updateInfo);
+      if (shouldUpdate != true || !context.mounted) return;
+
+      if (Platform.isAndroid) {
+        await _downloadAndInstallApk(updateInfo);
+      } else if (Platform.isIOS) {
+        await _handleIosUpdate(updateInfo);
       }
     } catch (e) {
-      if (config.onError != null) {
-        config.onError!(e.toString());
-      }
-      debugPrint('AppUpdater Error: $e');
+      _reportError(e.toString());
     }
+  }
+
+  void _reportError(String message) {
+    _notifyError(message);
+    debugPrint('AppUpdater Error: $message');
+  }
+
+  /// Passes a human readable message (without `Exception: ` noise) to
+  /// [UpdaterConfig.onError].
+  void _notifyError(String message) {
+    config.onError?.call(readableError(message));
   }
 
   String _getLanguageCode() {
@@ -72,45 +93,38 @@ class AppUpdater {
   }
 
   /// Check for update from server
-  Future<UpdateInfo?> _checkForUpdate(String currentVersion) async {
+  Future<UpdateInfo> _checkForUpdate(String currentVersion) async {
     final languageCode = _getLanguageCode();
 
-    try {
-      final headers = {
-        'Content-Type': 'application/json',
-        'Current-Version': currentVersion,
-        'Platform': Platform.isAndroid ? 'android' : 'ios',
-        'Accept-Language': languageCode,
-        ...?config.customHeaders,
-      };
+    final headers = {
+      'Content-Type': 'application/json',
+      'Current-Version': currentVersion,
+      'Platform': Platform.isAndroid ? 'android' : 'ios',
+      'Accept-Language': languageCode,
+      ...?config.customHeaders,
+    };
 
-      debugPrint('🌐 Requesting update with language: $languageCode');
+    debugPrint('🌐 Requesting update with language: $languageCode');
 
-      final response = await http
-          .get(Uri.parse(config.updateCheckUrl), headers: headers)
-          .timeout(
-            config.timeout,
-            onTimeout: () => throw Exception('Connection timeout'),
-          );
+    final response = await http
+        .get(Uri.parse(config.updateCheckUrl), headers: headers)
+        .timeout(
+          config.checkTimeout,
+          onTimeout: () => throw Exception('Connection timeout'),
+        );
 
-      if (response.statusCode == 200) {
-        final jsonResponse = json.decode(response.body);
-        final data = jsonResponse['data'] ?? jsonResponse;
-        return UpdateInfo.fromJson(data);
-      } else {
-        throw Exception('Failed to check update: ${response.statusCode}');
-      }
-    } catch (e) {
-      if (config.onError != null) {
-        config.onError!('Failed to check for updates: $e');
-      }
-      rethrow;
+    if (response.statusCode != 200) {
+      throw Exception('Server returned status code ${response.statusCode}');
     }
+
+    final jsonResponse = json.decode(response.body);
+    final data = jsonResponse['data'] ?? jsonResponse;
+    return UpdateInfo.fromJson(data);
   }
 
   /// Show update dialog
   Future<bool?> _showUpdateDialog(UpdateInfo updateInfo) async {
-    if (config.dialogStyle == DialogStyle.snackbar) {
+    if (config.dialogStyle == DialogStyle.bottomSheet) {
       // Use bottom sheet for snackbar style
       return await showModalBottomSheet<bool>(
         context: context,
@@ -119,7 +133,7 @@ class AppUpdater {
             config.allowDismiss && !(updateInfo.forceUpdate ?? false),
         enableDrag: config.allowDismiss && !(updateInfo.forceUpdate ?? false),
         builder: (BuildContext context) {
-          return SnackbarUpdateWidget(
+          return UpdateSheet(
             updateInfo: updateInfo,
             config: config,
             onUpdate: () => Navigator.of(context).pop(true),
@@ -141,7 +155,7 @@ class AppUpdater {
               config: config,
             );
           } else {
-            return UpdateDialog(updateInfo: updateInfo, config: config);
+            return MaterialUpdateDialog(updateInfo: updateInfo, config: config);
           }
         },
       );
@@ -150,275 +164,328 @@ class AppUpdater {
 
   /// Download and install APK (Android)
   Future<void> _downloadAndInstallApk(UpdateInfo updateInfo) async {
+    final force = updateInfo.forceUpdate ?? false;
+
+    String filePath;
+    while (true) {
+      try {
+        filePath = await _downloadApk(updateInfo, force: force);
+        break;
+      } on DownloadCancelledException {
+        return;
+      } catch (e) {
+        _notifyError('Download failed: $e');
+        final retry = await _showErrorPrompt(
+          'Failed to download update: $e',
+          force: force,
+        );
+        if (!retry) return;
+      }
+    }
+
+    config.onDownloadComplete?.call(filePath);
+    await _installApk(filePath, force: force);
+  }
+
+  /// Streams the APK to disk while showing progress. Throws
+  /// [DownloadCancelledException] if the user cancels.
+  Future<String> _downloadApk(
+    UpdateInfo updateInfo, {
+    required bool force,
+  }) async {
+    final directory = await getExternalStorageDirectory();
+    if (directory == null) {
+      throw Exception('External storage is not available');
+    }
+    if (!context.mounted) throw const DownloadCancelledException();
+
+    final downloader = UpdateDownloader(
+      url: Uri.parse(updateInfo.downloadUrl),
+      destination: File(
+        p.join(directory.path, sanitizeApkFileName(updateInfo.fileName)),
+      ),
+      expectedSize: updateInfo.fileSize,
+      timeout: config.downloadTimeout,
+    );
+    final progressRoute = _showBlockingProgress(
+      _buildProgress(
+        progress: downloader.progress,
+        // Forced updates cannot be cancelled.
+        onCancel: force ? null : downloader.cancel,
+      ),
+    );
+
     try {
-      // Show download dialog/snackbar based on style
-      if (config.dialogStyle == DialogStyle.snackbar) {
-        showModalBottomSheet(
-          context: context,
-          backgroundColor: Colors.transparent,
-          isDismissible: false,
-          enableDrag: false,
-          builder: (context) => SnackbarDownloadWidget(config: config),
-        );
-      } else {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) {
-            if (config.dialogStyle == DialogStyle.cupertino) {
-              return CupertinoDownloadDialog(config: config);
-            } else {
-              return DownloadDialog(config: config);
-            }
-          },
-        );
-      }
-
-      // Download APK
-      final response = await http
-          .get(Uri.parse(updateInfo.downloadUrl))
-          .timeout(
-            config.downloadTimeout,
-            onTimeout: () => throw Exception('Download timeout'),
-          );
-
-      if (response.statusCode == 200) {
-        // Save to storage
-        final directory = await getExternalStorageDirectory();
-        final fileName = updateInfo.fileName ?? 'app_update.apk';
-        final filePath = '${directory!.path}/$fileName';
-
-        final file = File(filePath);
-        await file.writeAsBytes(response.bodyBytes);
-
-        // Close download dialog
-        Navigator.of(context).pop();
-
-        // Notify success callback
-        if (config.onDownloadComplete != null) {
-          config.onDownloadComplete!(filePath);
-        }
-
-        // Install APK
-        await _installApk(filePath);
-      } else {
-        Navigator.of(context).pop();
-        throw Exception('Download failed: ${response.statusCode}');
-      }
-    } catch (e) {
-      Navigator.of(context).pop();
-      if (config.onError != null) {
-        config.onError!('Download failed: $e');
-      }
-      _showErrorDialog('Failed to download update: $e');
+      final file = await downloader.start();
+      return file.path;
+    } finally {
+      _closeRoute(progressRoute);
     }
   }
 
   /// Install APK (Android)
-  Future<void> _installApk(String filePath) async {
-    try {
-      final result = await OpenFilex.open(filePath);
+  Future<void> _installApk(String filePath, {required bool force}) async {
+    while (context.mounted) {
+      if (!await _ensureInstallPermission(force: force)) return;
 
-      if (result.type != ResultType.done) {
-        if (config.onError != null) {
-          config.onError!('Installation failed: ${result.message}');
+      try {
+        final result = await OpenFilex.open(filePath);
+        if (result.type != ResultType.done) {
+          throw Exception(result.message);
         }
-        _showErrorDialog('Failed to install: ${result.message}');
-      } else {
-        if (config.onInstallStart != null) {
-          config.onInstallStart!();
-        }
+      } catch (e) {
+        _notifyError('Installation failed: $e');
+        final retry = await _showErrorPrompt(
+          'Failed to install update: $e',
+          force: force,
+        );
+        if (retry) continue;
+        return;
       }
-    } catch (e) {
-      if (config.onError != null) {
-        config.onError!('Installation error: $e');
-      }
-      _showErrorDialog('Installation error: $e');
+
+      config.onInstallStart?.call();
+      if (!force) return;
+
+      // Forced update: if the user backs out of the system installer, keep
+      // the app blocked and offer to open it again.
+      if (!await _showInstallPendingPrompt()) return;
     }
+  }
+
+  /// Android 8+: the system refuses APK installs from an app until the user
+  /// allows it in Settings. Explain why before sending them there, then wait
+  /// until they come back. Returns `false` if the user declined.
+  Future<bool> _ensureInstallPermission({required bool force}) async {
+    while (!await InstallPermission.isGranted()) {
+      final openSettings = await _showPrompt(
+        icon: Icons.install_mobile_rounded,
+        title: config.installPermissionTitle ?? 'Allow app updates',
+        message:
+            config.installPermissionMessage ??
+            'To install the update, this app needs permission to install '
+                'apps. Turn on "Allow from this source", then come back here.',
+        primaryLabel: config.openSettingsButtonText ?? 'Open Settings',
+        secondaryLabel: force ? null : (config.laterButtonText ?? 'Later'),
+      );
+      if (!openSettings) return false;
+
+      final returned = _nextResume();
+      if (!await InstallPermission.openSettings()) {
+        // Settings could not be opened; let the system installer prompt.
+        return true;
+      }
+      await returned;
+      if (!context.mounted) return false;
+    }
+    return true;
+  }
+
+  /// Completes the next time the app returns to the foreground.
+  Future<void> _nextResume() {
+    final resumed = Completer<void>();
+    late final AppLifecycleListener listener;
+    listener = AppLifecycleListener(
+      onResume: () {
+        listener.dispose();
+        if (!resumed.isCompleted) resumed.complete();
+      },
+    );
+    return resumed.future;
   }
 
   /// Handle iOS update (Enterprise Distribution)
   Future<void> _handleIosUpdate(UpdateInfo updateInfo) async {
-    try {
-      await _installEnterpriseIpa(updateInfo);
-    } catch (e) {
-      if (config.onError != null) {
-        config.onError!('iOS update failed: $e');
+    final force = updateInfo.forceUpdate ?? false;
+
+    while (context.mounted) {
+      try {
+        await _installEnterpriseIpa(updateInfo);
+      } catch (e) {
+        _notifyError('iOS update failed: $e');
+        if (await _showErrorPrompt('Update failed: $e', force: force)) {
+          continue;
+        }
+        return;
       }
-      _showErrorDialog('Update failed: $e');
+
+      if (!force) return;
+      // Forced update: keep the app blocked until the new build replaces it.
+      if (!await _showInstallPendingPrompt()) return;
     }
   }
 
   /// Install Enterprise IPA using itms-services
   Future<void> _installEnterpriseIpa(UpdateInfo updateInfo) async {
-    // Show progress dialog based on style
-    if (config.dialogStyle == DialogStyle.cupertino) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => CupertinoAlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CupertinoActivityIndicator(radius: 14),
-              const SizedBox(height: 20),
-              Text(
-                config.iosInstallText ??
-                    'Preparing installation...\nPlease follow the system prompts.',
-                textAlign: TextAlign.center,
-                style:
-                    config.dialogContentStyle ?? const TextStyle(fontSize: 13),
-              ),
-            ],
-          ),
-        ),
+    final progressRoute = _showBlockingProgress(
+      _buildProgress(
+        message:
+            config.iosInstallText ??
+            'Preparing installation...\nPlease follow the system prompts.',
+      ),
+    );
+
+    try {
+      // The manifest URL should point to a .plist file on HTTPS server
+      final uri = buildItmsServicesUri(
+        updateInfo.iosManifestUrl ?? updateInfo.downloadUrl,
       );
-    } else if (config.dialogStyle == DialogStyle.snackbar) {
-      showModalBottomSheet(
-        context: context,
-        backgroundColor: Colors.transparent,
-        isDismissible: false,
-        enableDrag: false,
-        builder: (context) => Container(
-          margin: const EdgeInsets.only(left: 16, right: 16, bottom: 32),
-          decoration: BoxDecoration(
-            color:
-                config.snackbarBackgroundColor ?? Theme.of(context).cardColor,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.15),
-                blurRadius: 20,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 3,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        config.snackbarIconColor ??
-                            Theme.of(context).primaryColor,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    config.iosInstallText ??
-                        'Preparing installation...\nPlease follow the system prompts.',
-                    textAlign: TextAlign.center,
-                    style:
-                        config.dialogContentStyle ??
-                        const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    } else {
-      // Material style
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const CircularProgressIndicator(),
-              const SizedBox(height: 20),
-              Text(
-                config.iosInstallText ??
-                    'Preparing installation...\nPlease follow the system prompts.',
-                textAlign: TextAlign.center,
-                style: config.dialogContentStyle,
-              ),
-            ],
-          ),
-        ),
-      );
-    }
 
-    // Construct itms-services URL
-    // The manifest URL should point to a .plist file on HTTPS server
-    final manifestUrl = updateInfo.iosManifestUrl ?? updateInfo.downloadUrl;
-    final itmsUrl =
-        'itms-services://?action=download-manifest&url=$manifestUrl';
+      // Small delay so the user can read the message before the system prompt
+      await Future<void>.delayed(const Duration(seconds: 1));
+      _closeRoute(progressRoute);
 
-    final uri = Uri.parse(itmsUrl);
-
-    // Small delay to show the dialog
-    await Future.delayed(Duration(seconds: 1));
-
-    // Close dialog
-    Navigator.of(context).pop();
-
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-      if (config.onInstallStart != null) {
-        config.onInstallStart!();
+      if (!await canLaunchUrl(uri)) {
+        throw Exception(
+          'Could not launch installation. Please ensure the manifest URL is correct and accessible via HTTPS.',
+        );
       }
-    } else {
-      throw Exception(
-        'Could not launch installation. Please ensure the manifest URL is correct and accessible via HTTPS.',
-      );
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+      config.onInstallStart?.call();
+    } finally {
+      _closeRoute(progressRoute);
     }
   }
 
-  /// Show error dialog
-  void _showErrorDialog(String message) {
-    showDialog(
+  /// Progress UI in the configured style. [message] defaults to
+  /// [UpdaterConfig.downloadingText]; with [progress] a progress bar is shown.
+  WidgetBuilder _buildProgress({
+    String? message,
+    ValueListenable<DownloadProgress>? progress,
+    VoidCallback? onCancel,
+  }) {
+    return (context) {
+      switch (config.dialogStyle) {
+        case DialogStyle.bottomSheet:
+          return DownloadSheet(
+            config: config,
+            message: message,
+            progress: progress,
+            onCancel: onCancel,
+          );
+        case DialogStyle.cupertino:
+          return CupertinoDownloadDialog(
+            config: config,
+            message: message,
+            progress: progress,
+            onCancel: onCancel,
+          );
+        case DialogStyle.material:
+          return MaterialDownloadDialog(
+            config: config,
+            message: message,
+            progress: progress,
+            onCancel: onCancel,
+          );
+      }
+    };
+  }
+
+  /// Pushes a non-dismissible progress UI in the configured style and returns
+  /// its route, so it can be closed later with [_closeRoute] regardless of
+  /// what else is on the navigator stack.
+  Route<void> _showBlockingProgress(WidgetBuilder builder) {
+    if (config.dialogStyle == DialogStyle.bottomSheet) {
+      final navigator = Navigator.of(context);
+      final route = ModalBottomSheetRoute<void>(
+        builder: builder,
+        capturedThemes: InheritedTheme.capture(
+          from: context,
+          to: navigator.context,
+        ),
+        barrierLabel: MaterialLocalizations.of(context).scrimLabel,
+        backgroundColor: Colors.transparent,
+        isScrollControlled: false,
+        isDismissible: false,
+        enableDrag: false,
+      );
+      navigator.push(route);
+      return route;
+    }
+
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final route = DialogRoute<void>(
       context: context,
-      builder: (context) {
-        if (config.dialogStyle == DialogStyle.cupertino) {
-          return CupertinoAlertDialog(
-            title: Text(
-              config.errorTitle ?? 'Error',
-              style: config.dialogTitleStyle,
-            ),
-            content: Text(message, style: config.dialogContentStyle),
-            actions: [
-              CupertinoDialogAction(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(
-                  config.okButtonText ?? 'OK',
-                  style: config.buttonTextStyle,
-                ),
-              ),
-            ],
+      builder: builder,
+      themes: InheritedTheme.capture(from: context, to: navigator.context),
+      barrierDismissible: false,
+    );
+    navigator.push(route);
+    return route;
+  }
+
+  /// Closes [route] if it is still showing. Safe to call more than once.
+  void _closeRoute(Route<void> route) {
+    final navigator = route.navigator;
+    if (navigator == null || !route.isActive) return;
+    if (route.isCurrent) {
+      navigator.pop();
+    } else {
+      navigator.removeRoute(route);
+    }
+  }
+
+  /// Shows a [UpdateMessagePrompt] in the configured style. Resolves to
+  /// `true` when the primary action is chosen.
+  Future<bool> _showPrompt({
+    required IconData icon,
+    required String title,
+    required String message,
+    required String primaryLabel,
+    String? secondaryLabel,
+    UpdatePromptTone tone = UpdatePromptTone.info,
+  }) async {
+    if (!context.mounted) return false;
+    final dismissible = secondaryLabel != null;
+
+    Widget builder(BuildContext _) => UpdateMessagePrompt(
+      config: config,
+      icon: icon,
+      tone: tone,
+      title: title,
+      message: message,
+      primaryLabel: primaryLabel,
+      secondaryLabel: secondaryLabel,
+    );
+
+    final result = config.dialogStyle == DialogStyle.bottomSheet
+        ? await showModalBottomSheet<bool>(
+            context: context,
+            backgroundColor: Colors.transparent,
+            isDismissible: dismissible,
+            enableDrag: dismissible,
+            builder: builder,
+          )
+        : await showDialog<bool>(
+            context: context,
+            barrierDismissible: dismissible,
+            builder: builder,
           );
-        } else {
-          return AlertDialog(
-            title: Text(
-              config.errorTitle ?? 'Error',
-              style: config.dialogTitleStyle,
-            ),
-            content: Text(message, style: config.dialogContentStyle),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(
-                  config.okButtonText ?? 'OK',
-                  style: config.buttonTextStyle,
-                ),
-              ),
-            ],
-          );
-        }
-      },
+    return result ?? false;
+  }
+
+  /// Error with a Retry action. Forced updates offer only Retry, so the app
+  /// stays blocked until the update succeeds. Resolves to `true` on Retry.
+  Future<bool> _showErrorPrompt(String message, {required bool force}) {
+    return _showPrompt(
+      icon: Icons.error_outline_rounded,
+      tone: UpdatePromptTone.error,
+      title: config.errorTitle ?? 'Update failed',
+      message: readableError(message),
+      primaryLabel: config.retryButtonText ?? 'Retry',
+      secondaryLabel: force ? null : (config.closeButtonText ?? 'Close'),
+    );
+  }
+
+  /// Forced updates: shown once the installer was opened. Resolves to `true`
+  /// when the user asks to open the installer again.
+  Future<bool> _showInstallPendingPrompt() {
+    return _showPrompt(
+      icon: Icons.system_update_rounded,
+      title: config.installPendingTitle ?? 'Finish updating',
+      message:
+          config.installPendingMessage ??
+          'Install the new version to keep using the app.',
+      primaryLabel: config.installButtonText ?? 'Install',
     );
   }
 }
