@@ -124,11 +124,11 @@ void main() {
     test('Handle timeout scenarios', () {
       final config = UpdaterConfig(
         updateCheckUrl: 'http://localhost:3000/api/check-update',
-        timeout: Duration(seconds: 5),
+        checkTimeout: Duration(seconds: 5),
         downloadTimeout: Duration(seconds: 30),
       );
 
-      expect(config.timeout.inSeconds, 5);
+      expect(config.checkTimeout.inSeconds, 5);
       expect(config.downloadTimeout.inSeconds, 30);
     });
   });

@@ -1,15 +1,16 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../models/update_info.dart';
 import '../models/updater_config.dart';
+import 'update_content.dart';
 
-class UpdateDialog extends StatelessWidget {
+/// Material 3 update prompt.
+class MaterialUpdateDialog extends StatelessWidget {
   final UpdateInfo updateInfo;
   final UpdaterConfig config;
 
-  const UpdateDialog({
+  const MaterialUpdateDialog({
     super.key,
     required this.updateInfo,
     required this.config,
@@ -17,69 +18,94 @@ class UpdateDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final forceUpdate = updateInfo.forceUpdate ?? false;
+    final notes = updateInfo.releaseNotes?.trim();
+    final showSize =
+        (updateInfo.fileSize ?? 0) > 0 &&
+        defaultTargetPlatform == TargetPlatform.android;
 
     return PopScope(
       canPop: !forceUpdate && config.allowDismiss,
       child: AlertDialog(
+        icon: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: scheme.primaryContainer,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.system_update_rounded,
+            size: 28,
+            color: scheme.onPrimaryContainer,
+          ),
+        ),
         title: Text(
           config.dialogTitle ?? 'Update Available',
-          style:
-              config.dialogTitleStyle ??
-              const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
+          style: config.dialogTitleStyle,
         ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (updateInfo.version != null) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: Text(
-                    'Version ${updateInfo.version}',
-                    style: TextStyle(
-                      color: Colors.blue.shade700,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
+              if (updateInfo.version != null || showSize || forceUpdate)
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    if (forceUpdate)
+                      UpdateChip(
+                        label: requiredUpdateLabel(config),
+                        background: scheme.errorContainer,
+                        foreground: scheme.onErrorContainer,
+                      ),
+                    if (updateInfo.version != null)
+                      UpdateChip(
+                        label: versionLabel(config, updateInfo.version!),
+                        background: scheme.secondaryContainer,
+                        foreground: scheme.onSecondaryContainer,
+                      ),
+                    if (showSize)
+                      UpdateChip(
+                        label: formatFileSize(updateInfo.fileSize!),
+                        background: scheme.surfaceContainerHighest,
+                        foreground: scheme.onSurfaceVariant,
+                      ),
+                  ],
                 ),
-                const SizedBox(height: 15),
-              ],
-              if (updateInfo.releaseNotes != null) ...[
-                Text(
-                  updateInfo.releaseNotes!,
+              const SizedBox(height: 20),
+              if (notes != null && notes.isNotEmpty)
+                UpdateReleaseNotes(
+                  text: notes,
+                  maxHeight: 220,
+                  bulletColor: scheme.primary,
                   style:
                       config.dialogContentStyle ??
-                      const TextStyle(fontSize: 14, height: 1.5),
-                ),
-              ] else ...[
+                      theme.textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        height: 1.4,
+                      ),
+                )
+              else
                 Text(
                   config.dialogContent ??
                       'A new version is available. Would you like to update now?',
+                  textAlign: TextAlign.center,
                   style:
                       config.dialogContentStyle ??
-                      const TextStyle(fontSize: 14, height: 1.5),
+                      theme.textTheme.bodyMedium?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                        height: 1.4,
+                      ),
                 ),
-              ],
-              if (updateInfo.fileSize != null && Platform.isAndroid) ...[
-                const SizedBox(height: 10),
-                Text(
-                  'Size: ${_formatFileSize(updateInfo.fileSize!)}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                ),
-              ],
             ],
           ),
         ),
+        actionsAlignment: MainAxisAlignment.end,
         actions: [
           if (!forceUpdate)
             TextButton(
@@ -90,10 +116,11 @@ class UpdateDialog extends StatelessWidget {
                 style: config.buttonTextStyle,
               ),
             ),
-          ElevatedButton(
+          FilledButton.icon(
             onPressed: () => Navigator.of(context).pop(true),
             style: config.updateButtonStyle,
-            child: Text(
+            icon: const Icon(Icons.download_rounded, size: 18),
+            label: Text(
               config.updateButtonText ?? 'Update Now',
               style: config.buttonTextStyle,
             ),
@@ -101,11 +128,5 @@ class UpdateDialog extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  String _formatFileSize(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 }
