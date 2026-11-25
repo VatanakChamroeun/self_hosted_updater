@@ -1,4 +1,4 @@
-# Flutter Custom Updater
+# Self-Hosted Updater
 
 📦 A Flutter package for internal app updates (APK & IPA). Update your apps from your own server without App Store or Play Store. Built for self-hosted, enterprise, and private app distribution.
 
@@ -59,21 +59,22 @@ Install directly from GitHub (always get the latest):
 
 ```
 dependencies:
-  flutter_custom_updater:
+  self_hosted_updater:
     git:
-      url: https://github.com/vatanakchamroeun/flutter_custom_updater.git
+      url: https://github.com/VatanakChamroeun/flutter-custom-updater.git
 ```
 
 or install to your local
 
 ```
 dependencies:
-  flutter_custom_updater:
-    path: ../flutter_custom_updater
+  self_hosted_updater:
+    path: ../self_hosted_updater
 ```
 
-> ⬆️ **Upgrading from 1.x?** A few options were renamed in 2.0.0. The old names
-> still work but show deprecation warnings. See the [CHANGELOG](CHANGELOG.md#200).
+> ⬆️ **Upgrading from 1.x?** The package was renamed from `flutter_custom_updater`
+> to `self_hosted_updater`, and a few options were renamed (the old option names
+> still work with deprecation warnings). See the [CHANGELOG](CHANGELOG.md#200).
 
 ## ⚙️ Setup
 
@@ -112,7 +113,7 @@ Edit ios/Runner/Info.plist and add this inside the <dict> tag:
 ### Basic Example
 
 ```dart
-import 'package:flutter_custom_updater/flutter_custom_updater.dart';
+import 'package:self_hosted_updater/self_hosted_updater.dart';
 
 final updater = AppUpdater(
   context: context,

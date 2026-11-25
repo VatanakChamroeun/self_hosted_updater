@@ -6,12 +6,10 @@ void main() {
     // This test verifies the package can be imported successfully
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(
-          body: Center(child: Text('Flutter Custom Updater Test')),
-        ),
+        home: Scaffold(body: Center(child: Text('Self-Hosted Updater Test'))),
       ),
     );
 
-    expect(find.text('Flutter Custom Updater Test'), findsOneWidget);
+    expect(find.text('Self-Hosted Updater Test'), findsOneWidget);
   });
 }

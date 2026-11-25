@@ -17,13 +17,13 @@
             <key>metadata</key>
             <dict>
                 <key>bundle-identifier</key>
-                <string>com.example.flutter_custom_updater</string>
+                <string>com.example.example</string>
                 <key>bundle-version</key>
                 <string>1.2.3</string>
                 <key>kind</key>
                 <string>software</string>
                 <key>title</key>
-                <string>Flutter Custom Updater Example</string>
+                <string>Self-Hosted Updater Example</string>
             </dict>
         </dict>
     </array>

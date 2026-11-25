@@ -1,7 +1,7 @@
 {
-  "name": "flutter-custom-updater-mock-server",
+  "name": "self-hosted-updater-mock-server",
   "version": "1.0.0",
-  "description": "Mock server for testing Flutter Custom Updater package",
+  "description": "Mock server for testing Self-Hosted Updater package",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

@@ -1,4 +1,4 @@
-name: flutter_custom_updater
+name: self_hosted_updater
 description: "Flutter package for internal app updates (APK & IPA). Ideal for self-hosted, enterprise, and private distribution."
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -32,5 +32,5 @@ flutter:
       # Android-only native helper for the "install unknown apps" permission.
       # iOS needs no native code.
       android:
-        package: com.fluttercustomupdater
-        pluginClass: FlutterCustomUpdaterPlugin
+        package: com.selfhostedupdater
+        pluginClass: SelfHostedUpdaterPlugin

@@ -1,6 +1,6 @@
 # Mock Update Server
 
-A simple mock server for testing Flutter Custom Updater package.
+A simple mock server for testing Self-Hosted Updater package.
 
 ## Features
 

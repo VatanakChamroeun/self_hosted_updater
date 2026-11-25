@@ -2,9 +2,9 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_custom_updater/flutter_custom_updater.dart';
-import 'package:flutter_custom_updater/src/widgets/material_update_dialog.dart';
-import 'package:flutter_custom_updater/src/utils/update_utils.dart';
+import 'package:self_hosted_updater/self_hosted_updater.dart';
+import 'package:self_hosted_updater/src/widgets/material_update_dialog.dart';
+import 'package:self_hosted_updater/src/utils/update_utils.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';

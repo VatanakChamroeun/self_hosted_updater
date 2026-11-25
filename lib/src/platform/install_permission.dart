@@ -5,7 +5,7 @@ import 'package:flutter/services.dart';
 /// Android's "install unknown apps" permission, which an app needs before the
 /// system installer will accept an APK it downloaded.
 class InstallPermission {
-  static const MethodChannel _channel = MethodChannel('flutter_custom_updater');
+  static const MethodChannel _channel = MethodChannel('self_hosted_updater');
 
   /// Whether the app may launch the package installer. Always `true` off
   /// Android or when the native helper is unavailable (the installer then

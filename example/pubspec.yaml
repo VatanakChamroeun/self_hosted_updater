@@ -1,5 +1,5 @@
 name: example
-description: "Demonstrates how to use the flutter_custom_updater package."
+description: "Demonstrates how to use the self_hosted_updater package."
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -11,7 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   package_info_plus: '>=9.0.0 <11.0.0'
-  flutter_custom_updater:
+  self_hosted_updater:
     path: ../
 
   cupertino_icons: ^1.0.8

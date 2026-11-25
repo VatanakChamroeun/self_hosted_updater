@@ -12,7 +12,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Custom Updater Demo',
+      title: 'Self-Hosted Updater Demo',
       theme: ThemeData(colorSchemeSeed: Colors.blue),
       darkTheme: ThemeData(
         colorSchemeSeed: Colors.blue,

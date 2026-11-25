@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_custom_updater/flutter_custom_updater.dart';
+import 'package:self_hosted_updater/self_hosted_updater.dart';
 
 void main() {
   group('Integration Tests', () {

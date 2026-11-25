@@ -1,1 +1,1 @@
-rootProject.name = "flutter_custom_updater"
+rootProject.name = "self_hosted_updater"

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_custom_updater/src/models/dialog_style.dart';
+import 'package:self_hosted_updater/src/models/dialog_style.dart';
 
 /// Configuration for [AppUpdater]: where to check for updates, how the update
 /// UI looks and what it says, and callbacks for each step.

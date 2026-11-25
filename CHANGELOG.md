@@ -4,6 +4,17 @@
 
 ### Upgrading from 1.x
 
+The package was renamed from `flutter_custom_updater` to
+`self_hosted_updater`. Update the dependency key in `pubspec.yaml` and your
+imports:
+
+```dart
+// Before
+import 'package:flutter_custom_updater/flutter_custom_updater.dart';
+// After
+import 'package:self_hosted_updater/self_hosted_updater.dart';
+```
+
 Renamed options still work in 2.x but show deprecation warnings. They will be
 removed in 3.0.0.
 
@@ -69,6 +80,6 @@ Breaking changes without a replacement:
 
 ## 1.0.0
 
-- Initial release: update check against your own server, APK download and
+- Initial release as `flutter_custom_updater`: update check against your own server, APK download and
   install on Android, enterprise (itms-services) install on iOS, Material,
   Cupertino and snackbar dialog styles, multi-language release notes.

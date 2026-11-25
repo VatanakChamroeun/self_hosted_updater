@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_custom_updater/flutter_custom_updater.dart';
+import 'package:self_hosted_updater/self_hosted_updater.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -212,7 +212,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Flutter Custom Updater Demo'),
+        title: const Text('Self-Hosted Updater Demo'),
         centerTitle: true,
       ),
       body: Center(
@@ -256,7 +256,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 20),
         Text(
-          'Flutter Custom Updater',
+          'Self-Hosted Updater',
           textAlign: TextAlign.center,
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w700,

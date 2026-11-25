@@ -1,14 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_custom_updater/flutter_custom_updater.dart';
-import 'package:flutter_custom_updater/src/widgets/material_update_dialog.dart';
-import 'package:flutter_custom_updater/src/widgets/material_download_dialog.dart';
-import 'package:flutter_custom_updater/src/download/update_downloader.dart';
-import 'package:flutter_custom_updater/src/widgets/cupertino_download_dialog.dart';
-import 'package:flutter_custom_updater/src/widgets/cupertino_update_dialog.dart';
-import 'package:flutter_custom_updater/src/widgets/download_sheet.dart';
-import 'package:flutter_custom_updater/src/widgets/update_sheet.dart';
-import 'package:flutter_custom_updater/src/widgets/update_message_prompt.dart';
+import 'package:self_hosted_updater/self_hosted_updater.dart';
+import 'package:self_hosted_updater/src/widgets/material_update_dialog.dart';
+import 'package:self_hosted_updater/src/widgets/material_download_dialog.dart';
+import 'package:self_hosted_updater/src/download/update_downloader.dart';
+import 'package:self_hosted_updater/src/widgets/cupertino_download_dialog.dart';
+import 'package:self_hosted_updater/src/widgets/cupertino_update_dialog.dart';
+import 'package:self_hosted_updater/src/widgets/download_sheet.dart';
+import 'package:self_hosted_updater/src/widgets/update_sheet.dart';
+import 'package:self_hosted_updater/src/widgets/update_message_prompt.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 UpdaterConfig config({DialogStyle style = DialogStyle.material}) =>

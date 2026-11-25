@@ -1,4 +1,4 @@
-package com.fluttercustomupdater;
+package com.selfhostedupdater;
 
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
@@ -20,7 +20,7 @@ import io.flutter.plugin.common.MethodChannel;
 /**
  * Android helpers for the "install unknown apps" permission that APK updates need.
  */
-public class FlutterCustomUpdaterPlugin implements FlutterPlugin, ActivityAware,
+public class SelfHostedUpdaterPlugin implements FlutterPlugin, ActivityAware,
         MethodChannel.MethodCallHandler {
     private MethodChannel channel;
     private Context applicationContext;
@@ -30,7 +30,7 @@ public class FlutterCustomUpdaterPlugin implements FlutterPlugin, ActivityAware,
     @Override
     public void onAttachedToEngine(@NonNull FlutterPluginBinding binding) {
         applicationContext = binding.getApplicationContext();
-        channel = new MethodChannel(binding.getBinaryMessenger(), "flutter_custom_updater");
+        channel = new MethodChannel(binding.getBinaryMessenger(), "self_hosted_updater");
         channel.setMethodCallHandler(this);
     }
 

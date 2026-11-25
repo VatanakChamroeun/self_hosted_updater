@@ -1,4 +1,4 @@
-group = "com.fluttercustomupdater"
+group = "com.selfhostedupdater"
 version = "1.0"
 
 buildscript {
@@ -26,7 +26,7 @@ plugins {
 }
 
 android {
-    namespace = "com.fluttercustomupdater"
+    namespace = "com.selfhostedupdater"
 
     compileSdk = flutter.compileSdkVersion
 
