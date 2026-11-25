@@ -1,16 +1,40 @@
 name: self_hosted_updater
 description: "Flutter package for internal app updates (APK & IPA). Ideal for self-hosted, enterprise, and private distribution."
 
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
-
 version: 2.0.0
 repository: https://github.com/VatanakChamroeun/self_hosted_updater
 issue_tracker: https://github.com/VatanakChamroeun/self_hosted_updater/issues
+
+topics:
+  - app-update
+  - in-app-update
+  - apk
+  - enterprise
+  - self-hosted
+
+screenshots:
+  - description: Material 3 update prompt on Android
+    path: screenshots/android_material.png
+  - description: Download progress with Cancel in the bottom sheet style
+    path: screenshots/android_bottom_sheet_downloading.png
+  - description: Cupertino update prompt on iOS
+    path: screenshots/ios_cupertino.png
+  - description: Bottom sheet update prompt on iOS
+    path: screenshots/ios_bottom_sheet.png
+  - description: Android install permission explained before the system installer
+    path: screenshots/state_install_permission.png
+  - description: Required update with no Later option
+    path: screenshots/state_required_update.png
+  - description: Failed download with Retry
+    path: screenshots/state_download_failed.png
+  - description: Dark mode follows the app theme
+    path: screenshots/ios_material_dark.png
 
 license: MIT
 
 environment:
   sdk: ^3.9.0
+  flutter: ">=3.35.0"
 
 dependencies:
   flutter:
