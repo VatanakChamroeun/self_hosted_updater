@@ -12,6 +12,35 @@ app.use(cors());
 // Parse JSON bodies
 app.use(express.json());
 
+// Optional: simulate a slow network so the download progress UI is visible.
+//   SLOW_DOWNLOAD_KBPS=2048 node server.js
+const SLOW_DOWNLOAD_KBPS = Number(process.env.SLOW_DOWNLOAD_KBPS || 0);
+// Optional: mark every update as required.
+//   FORCE_UPDATE=1 node server.js
+const FORCE_UPDATE = process.env.FORCE_UPDATE === '1';
+
+if (SLOW_DOWNLOAD_KBPS > 0) {
+  app.get('/downloads/:file', (req, res, next) => {
+    const filePath = path.join(__dirname, 'downloads', path.basename(req.params.file));
+    if (!fs.existsSync(filePath)) return next();
+
+    const { size } = fs.statSync(filePath);
+    res.setHeader('Content-Length', size);
+    res.setHeader('Content-Type', 'application/vnd.android.package-archive');
+
+    const chunkSize = 64 * 1024;
+    const delayMs = Math.max(1, Math.round((chunkSize / 1024 / SLOW_DOWNLOAD_KBPS) * 1000));
+    const stream = fs.createReadStream(filePath, { highWaterMark: chunkSize });
+    stream.on('data', (chunk) => {
+      stream.pause();
+      res.write(chunk);
+      setTimeout(() => stream.resume(), delayMs);
+    });
+    stream.on('end', () => res.end());
+    req.on('close', () => stream.destroy());
+  });
+}
+
 // Serve static files (APK and IPA files)
 app.use('/downloads', express.static(path.join(__dirname, 'downloads')));
 
@@ -118,7 +147,7 @@ app.get('/api/check-update', (req, res) => {
         download_url: `${baseUrl}/downloads/${apkFileName}`,
         file_name: apkFileName,
         release_notes: getLocalizedReleaseNotes(language, 'android'),
-        force_update: false,
+        force_update: FORCE_UPDATE,
         file_size: fileSize
       }
     });
@@ -133,7 +162,7 @@ app.get('/api/check-update', (req, res) => {
         download_url: `${baseUrl}/ios/manifest.plist`,
         ios_manifest_url: `${baseUrl}/ios/manifest.plist`,
         release_notes: getLocalizedReleaseNotes(language, 'ios'),
-        force_update: false
+        force_update: FORCE_UPDATE
       }
     });
   } else {
@@ -200,6 +229,8 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`   - Update Check:  http://localhost:${PORT}/api/check-update`);
   console.log(`   - Android APK:   http://localhost:${PORT}/downloads/app-v1.2.3.apk`);
   console.log(`   - iOS Manifest:  http://localhost:${PORT}/ios/manifest.plist`);
+  if (SLOW_DOWNLOAD_KBPS > 0) console.log(`\n🐢 Slow downloads: ${SLOW_DOWNLOAD_KBPS} KB/s`);
+  if (FORCE_UPDATE) console.log('\n⚠️  All updates are marked as required (FORCE_UPDATE=1)');
   console.log(`\n🌐 Supported languages: ${Object.keys(RELEASE_NOTES).join(', ')}`);
   console.log('\n💡 Use the Network URL in your Flutter app for testing on physical devices\n');
 });
