@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.1
+
+- Declare iOS as a supported platform, so pub.dev lists both Android and iOS.
+  No behaviour change.
+
 ## 2.0.0
 
 ### Upgrading from 1.x

@@ -1,7 +1,7 @@
 name: self_hosted_updater
 description: "Flutter package for internal app updates (APK & IPA). Ideal for self-hosted, enterprise, and private distribution."
 
-version: 2.0.0
+version: 2.0.1
 repository: https://github.com/VatanakChamroeun/self_hosted_updater
 issue_tracker: https://github.com/VatanakChamroeun/self_hosted_updater/issues
 
@@ -55,8 +55,11 @@ flutter:
   uses-material-design: true
   plugin:
     platforms:
-      # Android-only native helper for the "install unknown apps" permission.
-      # iOS needs no native code.
+      # Native helper for the "install unknown apps" permission.
       android:
         package: com.selfhostedupdater
         pluginClass: SelfHostedUpdaterPlugin
+      # Dart-only: iOS installs go through an itms-services:// link.
+      ios:
+        dartPluginClass: SelfHostedUpdaterIos
+        dartFileName: src/platform/self_hosted_updater_ios.dart
