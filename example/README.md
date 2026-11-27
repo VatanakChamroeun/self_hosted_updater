@@ -1,16 +1,17 @@
-# example
+# self_hosted_updater example
 
-A new Flutter project.
+Start the mock update server from the repo root:
 
-## Getting Started
+```bash
+cd mock_server && npm install && node server.js
+```
 
-This project is a starting point for a Flutter application.
+Then run one of the two apps:
 
-A few resources to get you started if this is your first Flutter project:
+| Command | What it shows |
+|---|---|
+| `flutter run` | [lib/main.dart](lib/main.dart): the minimal integration. Checks on startup and from a button. |
+| `flutter run -t lib/demo.dart` | [lib/demo.dart](lib/demo.dart): the full demo used for the README screenshots. |
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Pick the dialog style in the demo with
+`--dart-define=DIALOG_STYLE=material` (`material` | `cupertino` | `bottomSheet`).

@@ -4,6 +4,8 @@
 
 - Declare iOS as a supported platform, so pub.dev lists both Android and iOS.
   No behaviour change.
+- The example's `main.dart` is now a short, copyable integration (it is what
+  pub.dev shows on the Example tab). The full demo moved to `lib/demo.dart`.
 
 ## 2.0.0
 

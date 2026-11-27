@@ -49,7 +49,7 @@ The dialogs pick up your app's dark `ColorScheme` automatically.
 
 <img src="screenshots/ios_material_dark.png" height="450"> <img src="screenshots/ios_bottom_sheet_dark.png" height="450">
 
-> 💡 To try each style in the example app: `flutter run --dart-define=DIALOG_STYLE=cupertino` (`material` | `cupertino` | `bottomSheet`).
+> 💡 To try each style in the example demo: `flutter run -t lib/demo.dart --dart-define=DIALOG_STYLE=cupertino` (`material` | `cupertino` | `bottomSheet`).
 
 ## 📦 Installation
 
@@ -296,7 +296,8 @@ The repo includes a mock update server and an example app:
 
 ```bash
 cd mock_server && npm install && node server.js
-cd example && flutter run
+cd example && flutter run                    # minimal integration (lib/main.dart)
+cd example && flutter run -t lib/demo.dart  # full demo used for the screenshots
 ```
 
 Start the server with `SLOW_DOWNLOAD_KBPS=2048` to watch the progress bar, or
